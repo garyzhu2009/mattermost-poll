@@ -44,7 +44,7 @@ def get_actions(poll):
     } for vote_id, vote in enumerate(options)]
     # add action to end the poll
     actions.append({
-        'name': "End Poll",
+        'name': "结束投票",
         'integration': {
             'url': url_for('end_poll', _external=True),
             'context': {
@@ -63,7 +63,6 @@ def resolve_usernames(user_ids):
     try:
         header = {'Authorization': 'Bearer ' + settings.MATTERMOST_PA_TOKEN}
         url = settings.MATTERMOST_URL + '/api/v4/users/ids'
-
         r = requests.post(url, headers=header, json=user_ids)
         if r.ok:
             return [user["username"] for user in json.loads(r.text)]
@@ -97,13 +96,13 @@ def get_poll(poll):
     if not poll.is_finished():
         fields = [{
             'short': False,
-            'value': "*Number of voters: {}*".format(poll.num_voters()),
+            'value': "*当前投票人数： {}*".format(poll.num_voters()),
             'title': ""
         }]
         if poll.max_votes > 1:
             fields += [{
                 'short': False,
-                'value': "*You have {} votes*".format(poll.max_votes),
+                'value': "*你共有 {} 票*".format(poll.max_votes),
                 'title': ""
             }]
 
@@ -124,7 +123,7 @@ def get_poll(poll):
                 'text': poll.message,
                 'fields': [{
                     'short': False,
-                    'value': "*Number of voters: {}*".format(poll.num_voters()),
+                    'value': "*总投票人数： {}*".format(poll.num_voters()),
                     'title': ""
                 }] + [{
                     'short': True,
@@ -189,8 +188,21 @@ def parse_slash_command(command):
 
     Arguments = namedtuple('Arguments', ['message', 'vote_options',
                                          'secret', 'public', 'max_votes'])
+    app.logger.error('===========args[0]: %s', args[0])
+    app.logger.error('===========args[1:]: %s', args[1:])
+
+    tmp_str = '';
+    
+
+    if public:
+        tmp_str = '【实名投票】' + args[0]
+    else:    
+        tmp_str = '【匿名投票】' + args[0]
+
+    app.logger.error('===========tmp_str: %s', tmp_str)
+
     if args:
-        return Arguments(args[0], args[1:], secret, public, max_votes)
+        return Arguments(tmp_str, args[1:], secret, public, max_votes)
     else:
         return Arguments('', [], secret, public, max_votes)
 
@@ -340,7 +352,7 @@ def vote():
         'update': {
             'props': get_poll(poll)
         },
-        'ephemeral_text': "Your vote has been updated:\n{}"
+        'ephemeral_text': "你的投票已更新:\n{}"
                           .format(vote_to_string(poll, user_id))
     })
 
@@ -375,5 +387,5 @@ def end_poll():
         })
 
     return jsonify({
-        'ephemeral_text': "You are not allowed to end this poll"
+        'ephemeral_text': "Error：你不能关闭这个投票"
     })
